@@ -2,28 +2,23 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copy csproj and restore as distinct layers
 COPY ["WebApiTestHarness.csproj", "./"]
 RUN dotnet restore "WebApiTestHarness.csproj"
 
-# Copy everything else and build
 COPY . .
-RUN dotnet build "WebApiTestHarness.csproj" -c Release -o /app/build
-
-# Stage 2: Publish
-FROM build AS publish
 RUN dotnet publish "WebApiTestHarness.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-# Stage 3: Final runtime image
+# Stage 2: Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
 
-# Render provides a PORT environment variable.
-# ASP.NET Core 8.0+ can be configured to listen on a specific port using ASPNETCORE_HTTP_PORTS.
-# We'll default to 10000 which is common for Render, but it will be overridden if you set PORT in Render.
-ENV ASPNETCORE_HTTP_PORTS=10000
-
+# Render injects PORT at runtime; we read it in Program.cs via Environment.GetEnvironmentVariable("PORT")
+# Default to 10000 if PORT is not set
+ENV PORT=10000
 EXPOSE 10000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD curl -f http://localhost:${PORT}/health || exit 1
 
 ENTRYPOINT ["dotnet", "WebApiTestHarness.dll"]

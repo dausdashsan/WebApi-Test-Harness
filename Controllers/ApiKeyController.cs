@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 using System;
 using System.Collections.Generic;
 
@@ -10,6 +11,11 @@ namespace WebApiTestHarness.Controllers
     public class ApiKeyController : ControllerBase
     {
         [HttpPost("generate")]
+        [SwaggerOperation(
+            Summary = "Generate a new API key",
+            Description = "Creates a new API key with `read` and `write` scopes, valid for one year. The full key value (`sk_test_...`) is only returned once at creation — store it securely. Use the key in the `X-API-Key` header for authenticated requests."
+        )]
+        [ProducesResponseType(201)]
         public IActionResult Generate()
         {
             return Created("", new
@@ -23,6 +29,11 @@ namespace WebApiTestHarness.Controllers
         }
 
         [HttpGet]
+        [SwaggerOperation(
+            Summary = "List all API keys",
+            Description = "Returns metadata for all active API keys. The actual key values are not returned — only IDs, scopes, and usage timestamps. Use `GET /api-keys/{keyId}` for details on a specific key."
+        )]
+        [ProducesResponseType(200)]
         public IActionResult List()
         {
             return Ok(new
@@ -43,7 +54,14 @@ namespace WebApiTestHarness.Controllers
         }
 
         [HttpGet("{keyId}")]
-        public IActionResult Get(string keyId)
+        [SwaggerOperation(
+            Summary = "Get API key details",
+            Description = "Returns metadata and permissions for a specific API key by its ID. Returns `404` if the key does not exist or has been revoked."
+        )]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(404)]
+        public IActionResult Get(
+            [SwaggerParameter("The unique key ID, e.g. `key_123`. Returned when the key was created.", Required = true)] string keyId)
         {
             return Ok(new
             {
@@ -57,7 +75,14 @@ namespace WebApiTestHarness.Controllers
         }
 
         [HttpDelete("{keyId}")]
-        public IActionResult Revoke(string keyId)
+        [SwaggerOperation(
+            Summary = "Revoke an API key",
+            Description = "Permanently revokes an API key, preventing it from being used for authentication. This action is irreversible — use `POST /api-keys/{keyId}/rotate` if you need a replacement key."
+        )]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(404)]
+        public IActionResult Revoke(
+            [SwaggerParameter("The unique key ID to revoke.", Required = true)] string keyId)
         {
             return Ok(new
             {
@@ -69,7 +94,14 @@ namespace WebApiTestHarness.Controllers
         }
 
         [HttpPost("{keyId}/rotate")]
-        public IActionResult Rotate(string keyId)
+        [SwaggerOperation(
+            Summary = "Rotate an API key",
+            Description = "Generates a new API key to replace an existing one. The old key remains valid for 24 hours to allow a zero-downtime transition. After 24 hours, only the new key is accepted."
+        )]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(404)]
+        public IActionResult Rotate(
+            [SwaggerParameter("The unique key ID to rotate.", Required = true)] string keyId)
         {
             return Ok(new
             {

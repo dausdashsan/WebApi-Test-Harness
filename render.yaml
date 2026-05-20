@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: webapi-test-harness
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production

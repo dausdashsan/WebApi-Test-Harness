@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 using System;
 
 namespace WebApiTestHarness.Controllers
@@ -8,6 +9,11 @@ namespace WebApiTestHarness.Controllers
     public class HealthController : ControllerBase
     {
         [HttpGet("health")]
+        [SwaggerOperation(
+            Summary = "Basic health check",
+            Description = "Returns the current health status of the service. Use this as a liveness probe for load balancers and container orchestrators."
+        )]
+        [ProducesResponseType(200)]
         public IActionResult GetHealth()
         {
             return Ok(new
@@ -20,6 +26,11 @@ namespace WebApiTestHarness.Controllers
         }
 
         [HttpGet("health/detailed")]
+        [SwaggerOperation(
+            Summary = "Detailed dependency health check",
+            Description = "Returns the health status of all downstream dependencies (database, cache, external APIs) with individual response times. Use as a readiness probe."
+        )]
+        [ProducesResponseType(200)]
         public IActionResult GetDetailedHealth()
         {
             return Ok(new
@@ -36,7 +47,13 @@ namespace WebApiTestHarness.Controllers
         }
 
         [HttpGet("metrics")]
-        public IActionResult GetMetrics([FromQuery] string period = "1m")
+        [SwaggerOperation(
+            Summary = "System request metrics",
+            Description = "Returns aggregated request metrics for the specified time period — total requests, success/failure counts, average response time, and 4xx/5xx error breakdown."
+        )]
+        [ProducesResponseType(200)]
+        public IActionResult GetMetrics(
+            [FromQuery, SwaggerParameter("Time period for the metrics window. Allowed values: `1m` (1 minute), `5m` (5 minutes), `1h` (1 hour).", Required = false)] string period = "1m")
         {
             return Ok(new
             {
@@ -58,7 +75,16 @@ namespace WebApiTestHarness.Controllers
         }
 
         [HttpGet("logs")]
-        public IActionResult GetLogs([FromQuery] string level = "INFO", [FromQuery] int limit = 50, [FromQuery] DateTime? startDate = null, [FromQuery] DateTime? endDate = null)
+        [SwaggerOperation(
+            Summary = "Application log entries",
+            Description = "Returns recent application log entries with optional filtering by log level, date range, and result count. Useful for observability and debugging gateway traffic."
+        )]
+        [ProducesResponseType(200)]
+        public IActionResult GetLogs(
+            [FromQuery, SwaggerParameter("Minimum log level to return. Allowed values: `DEBUG`, `INFO`, `WARN`, `ERROR`.", Required = false)] string level = "INFO",
+            [FromQuery, SwaggerParameter("Maximum number of log entries to return (1–500).", Required = false)] int limit = 50,
+            [FromQuery, SwaggerParameter("ISO 8601 start date/time for the log range filter, e.g. `2024-01-01T00:00:00Z`.", Required = false)] DateTime? startDate = null,
+            [FromQuery, SwaggerParameter("ISO 8601 end date/time for the log range filter, e.g. `2024-12-31T23:59:59Z`.", Required = false)] DateTime? endDate = null)
         {
             return Ok(new
             {
