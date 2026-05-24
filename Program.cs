@@ -25,16 +25,46 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 builder.Services.AddSwaggerGen(c =>
 {
     c.EnableAnnotations();
+
+    // Main unified document
     c.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "Web API Test Harness",
         Version = "v1",
         Description = "Comprehensive Web API for validating API Gateway (KrakenD) capabilities. All endpoints are UNSECURED by default."
     });
-    c.SwaggerDoc("basic", new OpenApiInfo { Title = "Web API Test Harness - Basic Auth", Version = "v1" });
-    c.SwaggerDoc("bearer", new OpenApiInfo { Title = "Web API Test Harness - Bearer Token", Version = "v1" });
-    c.SwaggerDoc("apikey", new OpenApiInfo { Title = "Web API Test Harness - API Key", Version = "v1" });
-    c.SwaggerDoc("combined", new OpenApiInfo { Title = "Web API Test Harness - Combined Auth", Version = "v1" });
+
+    // Separate documents for each auth type
+    c.SwaggerDoc("basicauth", new OpenApiInfo
+    {
+        Title = "Basic Auth Secured Endpoints",
+        Version = "v1",
+        Description = "API endpoints secured with HTTP Basic Authentication"
+    });
+    c.SwaggerDoc("bearer", new OpenApiInfo
+    {
+        Title = "Bearer Token Secured Endpoints",
+        Version = "v1",
+        Description = "API endpoints secured with Bearer Token authentication"
+    });
+    c.SwaggerDoc("jwt", new OpenApiInfo
+    {
+        Title = "JWT Token Secured Endpoints",
+        Version = "v1",
+        Description = "API endpoints secured with JWT Bearer Token authentication"
+    });
+    c.SwaggerDoc("apikey", new OpenApiInfo
+    {
+        Title = "API Key Secured Endpoints",
+        Version = "v1",
+        Description = "API endpoints secured with API Key authentication"
+    });
+    c.SwaggerDoc("oauth", new OpenApiInfo
+    {
+        Title = "OAuth 2.0 Secured Endpoints",
+        Version = "v1",
+        Description = "API endpoints secured with OAuth 2.0 authentication"
+    });
 
     c.AddSecurityDefinition("BasicAuth", new OpenApiSecurityScheme
     {
@@ -56,9 +86,47 @@ builder.Services.AddSwaggerGen(c =>
         In = ParameterLocation.Header,
         Description = "API Key Authentication — X-API-Key: {key}"
     });
+    c.AddSecurityDefinition("OAuth2", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.OAuth2,
+        Flows = new OpenApiOAuthFlows
+        {
+            AuthorizationCode = new OpenApiOAuthFlow
+            {
+                AuthorizationUrl = new Uri("http://localhost:5000/secure/oauth/authorize"),
+                TokenUrl = new Uri("http://localhost:5000/secure/oauth/token"),
+                Scopes = new Dictionary<string, string>
+                {
+                    { "read", "Read access" },
+                    { "write", "Write access" },
+                    { "delete", "Delete access" }
+                }
+            }
+        },
+        Description = "OAuth 2.0 Authentication"
+    });
 
-    // Include all controllers in all docs
-    c.DocInclusionPredicate((_, _) => true);
+    // Document inclusion predicate to separate by document
+    c.DocInclusionPredicate((docName, apiDesc) =>
+    {
+        if (docName == "v1")
+        {
+            // Main document includes everything
+            return true;
+        }
+
+        var controllerName = apiDesc.ActionDescriptor?.RouteValues?["controller"]?.ToString() ?? "";
+
+        return docName switch
+        {
+            "basicauth" => controllerName.Contains("BasicAuth", StringComparison.OrdinalIgnoreCase),
+            "bearer" => controllerName.Contains("BearerToken", StringComparison.OrdinalIgnoreCase),
+            "jwt" => controllerName.Contains("JwtToken", StringComparison.OrdinalIgnoreCase),
+            "apikey" => controllerName.Contains("ApiKey", StringComparison.OrdinalIgnoreCase),
+            "oauth" => controllerName.Contains("OAuth", StringComparison.OrdinalIgnoreCase),
+            _ => false
+        };
+    });
 });
 
 builder.Services
@@ -85,15 +153,69 @@ app.Map("/ws/connect", async context =>
 
 // Swagger — always enabled (needed for gateway testing, no env check)
 app.UseSwagger();
+
+// Main Swagger UI (unified view with all documents)
 app.UseSwaggerUI(c =>
 {
     c.RoutePrefix = "swagger";
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Default (Unsecured)");
-    c.SwaggerEndpoint("/swagger/basic/swagger.json", "Basic Auth Example");
-    c.SwaggerEndpoint("/swagger/bearer/swagger.json", "Bearer Token Example");
-    c.SwaggerEndpoint("/swagger/apikey/swagger.json", "API Key Example");
-    c.SwaggerEndpoint("/swagger/combined/swagger.json", "Combined Auth Example");
-    c.DocumentTitle = "Web API Test Harness";
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "📋 All Endpoints (Unified View)");
+    c.SwaggerEndpoint("/swagger/basicauth/swagger.json", "🔐 Basic Auth");
+    c.SwaggerEndpoint("/swagger/bearer/swagger.json", "🎫 Bearer Token");
+    c.SwaggerEndpoint("/swagger/jwt/swagger.json", "🔑 JWT Token");
+    c.SwaggerEndpoint("/swagger/apikey/swagger.json", "🗝️ API Key");
+    c.SwaggerEndpoint("/swagger/oauth/swagger.json", "🌐 OAuth 2.0");
+    c.DocumentTitle = "Web API Test Harness - Complete Documentation";
+    c.DisplayRequestDuration();
+    c.EnableFilter();
+    c.EnableDeepLinking();
+});
+
+// Individual Swagger UIs for each auth type
+app.UseSwaggerUI(c =>
+{
+    c.RoutePrefix = "swagger/basicauth";
+    c.SwaggerEndpoint("/swagger/basicauth/swagger.json", "Basic Auth Secured Endpoints");
+    c.DocumentTitle = "Basic Auth - Web API Test Harness";
+    c.DisplayRequestDuration();
+    c.EnableFilter();
+    c.EnableDeepLinking();
+});
+
+app.UseSwaggerUI(c =>
+{
+    c.RoutePrefix = "swagger/bearer";
+    c.SwaggerEndpoint("/swagger/bearer/swagger.json", "Bearer Token Secured Endpoints");
+    c.DocumentTitle = "Bearer Token - Web API Test Harness";
+    c.DisplayRequestDuration();
+    c.EnableFilter();
+    c.EnableDeepLinking();
+});
+
+app.UseSwaggerUI(c =>
+{
+    c.RoutePrefix = "swagger/jwt";
+    c.SwaggerEndpoint("/swagger/jwt/swagger.json", "JWT Token Secured Endpoints");
+    c.DocumentTitle = "JWT Token - Web API Test Harness";
+    c.DisplayRequestDuration();
+    c.EnableFilter();
+    c.EnableDeepLinking();
+});
+
+app.UseSwaggerUI(c =>
+{
+    c.RoutePrefix = "swagger/apikey";
+    c.SwaggerEndpoint("/swagger/apikey/swagger.json", "API Key Secured Endpoints");
+    c.DocumentTitle = "API Key - Web API Test Harness";
+    c.DisplayRequestDuration();
+    c.EnableFilter();
+    c.EnableDeepLinking();
+});
+
+app.UseSwaggerUI(c =>
+{
+    c.RoutePrefix = "swagger/oauth";
+    c.SwaggerEndpoint("/swagger/oauth/swagger.json", "OAuth 2.0 Secured Endpoints");
+    c.DocumentTitle = "OAuth 2.0 - Web API Test Harness";
     c.DisplayRequestDuration();
     c.EnableFilter();
     c.EnableDeepLinking();
