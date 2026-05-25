@@ -91,9 +91,8 @@ builder.Services.AddSwaggerGen(c =>
         Type = SecuritySchemeType.OAuth2,
         Flows = new OpenApiOAuthFlows
         {
-            AuthorizationCode = new OpenApiOAuthFlow
+            ClientCredentials = new OpenApiOAuthFlow
             {
-                AuthorizationUrl = new Uri("http://localhost:5000/secure/oauth/authorize"),
                 TokenUrl = new Uri("http://localhost:5000/secure/oauth/token"),
                 Scopes = new Dictionary<string, string>
                 {
@@ -103,7 +102,7 @@ builder.Services.AddSwaggerGen(c =>
                 }
             }
         },
-        Description = "OAuth 2.0 Authentication"
+        Description = "OAuth 2.0 Client Credentials Flow"
     });
 
     // Document inclusion predicate to separate by document
