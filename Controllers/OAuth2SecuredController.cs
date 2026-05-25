@@ -97,6 +97,29 @@ namespace WebApiTestHarness.Controllers
                 return Unauthorized(new { error = "token_expired", error_description = "Access token has expired" });
             }
 
+            // Client credentials tokens are not tied to a user
+            if (accessToken.Username == "client_credentials")
+            {
+                return Ok(new
+                {
+                    success = true,
+                    message = "OAuth 2.0 token validated successfully",
+                    user = "client_credentials",
+                    resource = new
+                    {
+                        id = Guid.NewGuid().ToString(),
+                        title = "OAuth Protected Resource",
+                        content = "This data is protected by OAuth 2.0 authentication",
+                        clientData = new
+                        {
+                            clientId = ClientId,
+                            grantType = "client_credentials"
+                        }
+                    },
+                    accessedAt = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ")
+                });
+            }
+
             if (!OAuthUsers.TryGetValue(accessToken.Username, out var user))
             {
                 return Unauthorized(new { error = "invalid_token", error_description = "User not found" });
